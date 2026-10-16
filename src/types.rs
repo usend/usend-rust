@@ -1534,3 +1534,103 @@ pub struct DraftParams {
     pub forward_email_id: Option<String>,
     pub reply_all: bool,
 }
+
+// ------------------------------------------------------------ short links
+
+/// A link on the shared tracking host (`short_url`) that redirects to `target_url` and counts clicks.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct ShortLink {
+    pub object: String,
+    pub id: String,
+    pub code: String,
+    pub short_url: String,
+    pub target_url: String,
+    pub title: String,
+    pub clicks: u64,
+    pub human_clicks: u64,
+    pub expires_at: Option<String>,
+    pub disabled: bool,
+    pub disabled_by_admin: bool,
+    pub created_at: String,
+}
+
+/// The body of `short_links().create`. `code` is 3 to 32 characters of `A-Za-z0-9-_` (random when unset).
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct ShortLinkParams {
+    pub target_url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// RFC 3339.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<String>,
+}
+
+impl ShortLinkParams {
+    pub fn new(target_url: impl Into<String>) -> Self {
+        ShortLinkParams { target_url: target_url.into(), ..Default::default() }
+    }
+    pub fn code(mut self, code: impl Into<String>) -> Self {
+        self.code = Some(code.into());
+        self
+    }
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+    pub fn expires_at(mut self, rfc3339: impl Into<String>) -> Self {
+        self.expires_at = Some(rfc3339.into());
+        self
+    }
+}
+
+/// The body of `short_links().update`; unset fields are left alone. The code cannot change.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct ShortLinkUpdate {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disabled: Option<bool>,
+    /// `Some(Some(t))` sets the expiry, `Some(None)` clears it, `None` leaves it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<Option<String>>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct ShortLinkClicks {
+    pub clicks: u64,
+    pub human_clicks: u64,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct ShortLinkDay {
+    pub date: String,
+    pub clicks: u64,
+    pub human_clicks: u64,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct ShortLinkReferrer {
+    pub referrer: String,
+    pub clicks: u64,
+}
+
+/// Click statistics over a period (zero-filled UTC days).
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct ShortLinkStats {
+    pub object: String,
+    pub id: String,
+    pub days: u32,
+    pub totals: ShortLinkClicks,
+    pub in_period: ShortLinkClicks,
+    pub daily: Vec<ShortLinkDay>,
+    pub referrers: Vec<ShortLinkReferrer>,
+}

@@ -52,6 +52,10 @@ impl Client {
     pub fn topics(&self) -> Topics<'_> {
         Topics(self)
     }
+    /// Short links on the shared tracking host that redirect to a target URL and count clicks.
+    pub fn short_links(&self) -> ShortLinks<'_> {
+        ShortLinks(self)
+    }
     pub fn broadcasts(&self) -> Broadcasts<'_> {
         Broadcasts(self)
     }
@@ -456,6 +460,37 @@ impl Topics<'_> {
     /// Refused while a broadcast uses it.
     pub fn remove(&self, id: &str) -> Result<()> {
         self.0.delete_ok(&format!("/topics/{}", enc(id)))
+    }
+}
+
+// ------------------------------------------------------------- short links
+
+pub struct ShortLinks<'a>(&'a Client);
+
+impl ShortLinks<'_> {
+    pub fn create(&self, p: &ShortLinkParams) -> Result<ShortLink> {
+        self.0.post("/short-links", p)
+    }
+    /// A page of short links, newest first.
+    pub fn list(&self, params: &ListParams) -> Result<List<ShortLink>> {
+        self.0.get(&with_query("/short-links", pairs_of(params)))
+    }
+    pub fn get(&self, id: &str) -> Result<ShortLink> {
+        self.0.get(&format!("/short-links/{}", enc(id)))
+    }
+    pub fn update(&self, id: &str, p: &ShortLinkUpdate) -> Result<ShortLink> {
+        self.0.patch(&format!("/short-links/{}", enc(id)), p)
+    }
+    pub fn remove(&self, id: &str) -> Result<()> {
+        self.0.delete_ok(&format!("/short-links/{}", enc(id)))
+    }
+    /// Click statistics for the last `days` days (1 to 365; `None` = 30).
+    pub fn stats(&self, id: &str, days: Option<u32>) -> Result<ShortLinkStats> {
+        let path = format!("/short-links/{}/stats", enc(id));
+        match days {
+            Some(d) => self.0.get(&with_query(&path, vec![("days", d.to_string())])),
+            None => self.0.get(&path),
+        }
     }
 }
 

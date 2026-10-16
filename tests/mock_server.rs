@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use usend::{BroadcastRecipientsParams, Client, ClientBuilder, Error, ListParams, RecipientType, SendEmail, SendEvent};
+use usend::{BroadcastRecipientsParams, Client, ClientBuilder, Error, ListParams, RecipientType, SendEmail, SendEvent, ShortLinkParams, ShortLinkUpdate};
 
 /// Serves one canned raw response per connection, in order, and records each raw request.
 fn serve(responses: Vec<String>) -> (String, Arc<Mutex<Vec<String>>>) {
@@ -147,4 +147,29 @@ fn https_is_refused_by_the_builtin_transport() {
     #[cfg(not(any(feature = "ureq", feature = "reqwest")))]
     assert!(matches!(c.emails().get("x").unwrap_err(), Error::Transport(_)));
     let _ = c;
+}
+
+#[test]
+fn short_links() {
+    let (base, seen) = serve(vec![
+        ok(r#"{"id":"l1","code":"abc","short_url":"https://t.example/s/abc"}"#),
+        ok(r#"{"object":"short_link_stats","id":"l1","days":7,"totals":{"clicks":5,"human_clicks":3}}"#),
+        ok(r#"{"id":"l1"}"#),
+        ok(r#"{"object":"short_link","id":"l1","deleted":true}"#),
+    ]);
+    let c = client(&base);
+    let link = c.short_links().create(&ShortLinkParams::new("https://example.com").code("abc")).unwrap();
+    assert_eq!(link.short_url, "https://t.example/s/abc");
+    let stats = c.short_links().stats("l 1", Some(7)).unwrap();
+    assert_eq!(stats.totals.human_clicks, 3);
+    c.short_links().update("l1", &ShortLinkUpdate { disabled: Some(true), expires_at: Some(None), ..Default::default() }).unwrap();
+    c.short_links().remove("l1").unwrap();
+
+    let seen = seen.lock().unwrap();
+    assert!(seen[0].starts_with("POST /short-links HTTP/1.1"), "{}", seen[0]);
+    assert!(seen[0].contains(r#""code":"abc""#));
+    assert!(seen[1].starts_with("GET /short-links/l%201/stats?days=7 HTTP/1.1"), "{}", seen[1]);
+    assert!(seen[2].starts_with("PATCH /short-links/l1 HTTP/1.1"), "{}", seen[2]);
+    assert!(seen[2].contains(r#""expires_at":null"#), "clearing the expiry sends null: {}", seen[2]);
+    assert!(seen[3].starts_with("DELETE /short-links/l1 HTTP/1.1"), "{}", seen[3]);
 }
