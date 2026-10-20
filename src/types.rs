@@ -460,6 +460,9 @@ pub struct Domain {
     pub open_tracking: bool,
     pub click_tracking: bool,
     pub receiving_enabled: bool,
+    /// "all" (catch-all, the default) or "inboxes".
+    #[serde(default)]
+    pub receiving_mode: String,
     pub custom_return_path: String,
     pub tls: String,
     pub dns_provider: String,
@@ -491,6 +494,8 @@ pub struct UpdateDomain {
     pub click_tracking: Option<bool>,
     #[serde(skip_serializing_if = "is_none")]
     pub receiving_enabled: Option<bool>,
+    #[serde(skip_serializing_if = "is_none")]
+    pub receiving_mode: Option<String>,
     #[serde(skip_serializing_if = "is_none")]
     pub custom_return_path: Option<String>,
     #[serde(skip_serializing_if = "is_none")]
