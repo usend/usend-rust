@@ -428,7 +428,7 @@ pub struct InboundAttachment {
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
 pub struct DomainRecord {
-    /// `DKIM`, `SPF`, `DMARC`, `Receiving`, `BIMI`.
+    /// `DKIM`, `SPF`, `DMARC`, `Receiving`.
     pub record: String,
     /// Relative to the domain; `@` is the apex.
     pub name: String,
